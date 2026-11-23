@@ -60,3 +60,14 @@ a:focus-visible,button:focus-visible{outline:3px solid #9b5077;outline-offset:4p
 .community-grid button:disabled{opacity:.65;cursor:not-allowed}
 .community-grid p{font-size:.85rem;color:#766374;margin-top:16px}
 @media(max-width:760px){.community-grid{grid-template-columns:1fr}}
+
+.hero{background:linear-gradient(90deg,#fff0f5b0,#fce5f3e0 52%,#fce5f340),url('pawmora-village.webp') right center/auto 100% no-repeat,#f9e3ef}
+.hero-inner{display:flex;flex-direction:row-reverse;align-items:center}
+.hero-copy{text-align:center;flex:1}.hero-actions{justify-content:center}
+.hero-art{flex:1;min-width:0;border-radius:24px;border:0;outline:0;box-shadow:none;background:transparent}
+.hero-art:has(.royal-portrait){min-height:0;height:auto;aspect-ratio:625/595}
+.royal-portrait{display:block;width:100%;height:auto;border-radius:24px;position:relative;z-index:6}
+.hero h1{color:#a42e67;text-shadow:0 2px #fff;font-weight:700}
+.btn-primary{background:linear-gradient(#ed77a7,#bd3976);border:1px solid #f7c7a0;border-radius:40px}
+.community-grid article{background:#fff4f8;border-color:#f0c7da}
+@media(max-width:760px){.hero-inner{flex-direction:column}.hero-art{width:100%}.hero-copy{width:100%}}
