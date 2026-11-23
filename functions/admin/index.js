@@ -6,20 +6,35 @@ export async function onRequest({request,env}){
 const u=new URL(request.url);
 if(u.hostname!=='pawmora-website.pages.dev')return new Response('Forbidden',{status:403,headers});
 if(!env.ADMIN_PASSWORD||env.ADMIN_PASSWORD.length<24||!env.DB)return new Response('Yönetim paneli henüz yapılandırılmadı.',{status:503,headers});
-if(request.method!=='GET')return new Response('Method not allowed',{status:405,headers});
+if(!['GET','POST'].includes(request.method))return new Response('Method not allowed',{status:405,headers});
 let auth='';try{const h=request.headers.get('Authorization')||'';if(h.startsWith('Basic ')&&h.length<4096)auth=atob(h.slice(6))}catch{}
 if(!await equal(auth,'admin:'+env.ADMIN_PASSWORD))return new Response('Giriş gerekli.',{status:401,headers:{...headers,'WWW-Authenticate':'Basic realm="Pawmora Admin", charset="UTF-8"'}});
 try{
+await env.DB.prepare("CREATE TABLE IF NOT EXISTS idea_status (id TEXT NOT NULL, day TEXT NOT NULL, status TEXT NOT NULL CHECK(status IN ('read','archived')), PRIMARY KEY(id,day))").run();
+if(request.method==='POST'){
+if(request.headers.get('Origin')!==u.origin||!request.headers.get('Content-Type')?.startsWith('application/x-www-form-urlencoded'))return new Response('Forbidden',{status:403,headers});
+const len=Number(request.headers.get('Content-Length'));if(!len||len>2048)return new Response('Invalid request',{status:400,headers});
+const f=await request.formData(),id=f.get('id'),day=f.get('day'),action=f.get('action');
+if(typeof id!=='string'||!/^[a-f0-9]{64}$/.test(id)||typeof day!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(day)||!['read','archived','unread'].includes(action))return new Response('Invalid request',{status:400,headers});
+if(action==='unread')await env.DB.prepare('DELETE FROM idea_status WHERE id=? AND day=?').bind(id,day).run();
+else await env.DB.prepare('INSERT INTO idea_status(id,day,status) SELECT id,day,? FROM ideas WHERE id=? AND day=? ON CONFLICT(id,day) DO UPDATE SET status=excluded.status').bind(action,id,day).run();
+return new Response(null,{status:303,headers:{...headers,Location:'/admin/'}});
+}
 const votes=(await env.DB.prepare('SELECT choice,COUNT(*) AS n FROM votes GROUP BY choice').all()).results;
 const total=votes.reduce((a,b)=>a+Number(b.n),0);
 const page=Math.min(10000,Math.max(1,parseInt(u.searchParams.get('page'))||1));
-const ideas=(await env.DB.prepare('SELECT day,message FROM ideas ORDER BY day DESC,id LIMIT 50 OFFSET ?').bind((page-1)*50).all()).results;
+const filter=['unread','read','archived'].includes(u.searchParams.get('filter'))?u.searchParams.get('filter'):'all';
+const where=filter==='all'?'':' WHERE COALESCE(s.status,\'unread\')=?';
+const args=filter==='all'?[]:[filter];
+const ideas=(await env.DB.prepare("SELECT i.id,i.day,i.message,COALESCE(s.status,'unread') AS status FROM ideas i LEFT JOIN idea_status s ON i.id=s.id AND i.day=s.day"+where+" ORDER BY i.day DESC,i.id LIMIT 50 OFFSET ?").bind(...args,(page-1)*50).all()).results;
+const filtered=(await env.DB.prepare("SELECT COUNT(*) AS n FROM ideas i LEFT JOIN idea_status s ON i.id=s.id AND i.day=s.day"+where).bind(...args).first()).n;
 const count=(await env.DB.prepare('SELECT COUNT(*) AS n FROM ideas').first()).n;
 if(u.searchParams.get('format')==='csv'){
 const cell=v=>{let s=String(v);if(/^[\s]*[=+@-]|^[\t\r\n]/.test(s))s="'"+s;return '"'+s.replace(/"/g,'""')+'"'};
 return new Response('\uFEFFTarih,Öneri\r\n'+ideas.map(x=>[cell(x.day),cell(x.message)].join(',')).join('\r\n'),{headers:{...headers,'Content-Type':'text/csv; charset=utf-8','Content-Disposition':'attachment; filename="pawmora-ideas-page-'+page+'.csv"'}})}
 const bars=Object.entries(labels).map(([k,l])=>{const n=Number(votes.find(x=>x.choice===k)?.n||0);return '<p>'+l+' <strong>'+n+'</strong></p><progress max="'+Math.max(1,total)+'" value="'+n+'"></progress>'}).join('');
-const rows=ideas.map(x=>'<tr><td>'+esc(x.day)+'</td><td>'+esc(x.message)+'</td></tr>').join('');
-return new Response('<!doctype html><html lang="tr"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Pawmora Admin</title><style>body{font:16px system-ui;background:#fff4f5;color:#54354b;margin:0}main{max-width:960px;margin:auto;padding:28px}section{background:#fff;border:1px solid #e8c9da;border-radius:18px;padding:24px;margin:20px 0}h1{font-family:Georgia;font-size:36px}strong{float:right}progress{width:100%;accent-color:#b7799c}table{width:100%;border-collapse:collapse}td,th{text-align:left;padding:12px;border-bottom:1px solid #eadce4;overflow-wrap:anywhere}td:first-child{width:105px}a{color:#8a3967}nav{display:flex;gap:20px;flex-wrap:wrap}</style><main><h1>✿ Pawmora Admin</h1><p>Topluluk yönetimi · Özel panel</p><nav><a href="/">Siteye dön</a><a href="/admin/">Yenile</a></nav><section><h2>Toplam oy: '+total+'</h2>'+bars+'</section><section><h2>Gelen öneriler: '+Number(count)+'</h2><p><a href="?page='+page+'&amp;format=csv">Bu sayfayı CSV indir</a></p><table><thead><tr><th>Tarih</th><th>Öneri</th></tr></thead><tbody>'+rows+'</tbody></table><p>Sayfa '+page+'</p><nav>'+(page>1?'<a href="?page='+(page-1)+'">Önceki</a>':'')+(page*50<count?'<a href="?page='+(page+1)+'">Sonraki</a>':'')+'</nav></section></main></html>',{headers:{...headers,'Content-Type':'text/html; charset=utf-8'}});
+const statusLabels={unread:'Okunmadı',read:'Okundu',archived:'Arşiv'};
+const rows=ideas.map(x=>'<tr><td>'+esc(x.day)+'</td><td>'+esc(x.message)+'</td><td>'+statusLabels[x.status]+'<form method="post" action="/admin/"><input type="hidden" name="id" value="'+esc(x.id)+'"><input type="hidden" name="day" value="'+esc(x.day)+'"><button name="action" value="read">Okundu</button> <button name="action" value="archived">Arşivle</button> <button name="action" value="unread">Geri al</button></form></td></tr>').join('');
+return new Response('<!doctype html><html lang="tr"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Pawmora Admin</title><style>body{font:16px system-ui;background:#fff4f5;color:#54354b;margin:0}main{max-width:960px;margin:auto;padding:28px}section{background:#fff;border:1px solid #e8c9da;border-radius:18px;padding:24px;margin:20px 0}h1{font-family:Georgia;font-size:36px}strong{float:right}progress{width:100%;accent-color:#b7799c}table{width:100%;border-collapse:collapse}td,th{text-align:left;padding:12px;border-bottom:1px solid #eadce4;overflow-wrap:anywhere}td:first-child{width:105px}a{color:#8a3967}nav{display:flex;gap:20px;flex-wrap:wrap}button{background:#f8e4ee;border:1px solid #dcb5ca;border-radius:8px;padding:7px;color:#54354b;margin:3px;cursor:pointer}form{margin-top:8px}td{vertical-align:top}@media(max-width:600px){main{padding:12px}section{padding:12px}td,th{padding:6px;font-size:13px}}</style><main><h1>✿ Pawmora Admin</h1><p>Topluluk yönetimi · Özel panel</p><nav><a href="/">Siteye dön</a><a href="/admin/">Yenile</a></nav><section><h2>Toplam oy: '+total+'</h2>'+bars+'</section><section><h2>Gelen öneriler: '+Number(count)+'</h2><nav><a href="?filter=all">Tümü</a><a href="?filter=unread">Okunmadı</a><a href="?filter=read">Okundu</a><a href="?filter=archived">Arşiv</a></nav><p><a href="?filter='+filter+'&amp;page='+page+'&amp;format=csv">Bu sayfayı CSV indir</a></p><table><thead><tr><th>Tarih</th><th>Öneri</th><th>Durum / İşlem</th></tr></thead><tbody>'+rows+'</tbody></table><p>Sayfa '+page+'</p><nav>'+(page>1?'<a href="?filter='+filter+'&amp;page='+(page-1)+'">Önceki</a>':'')+(page*50<filtered?'<a href="?page='+(page+1)+'">Sonraki</a>':'')+'</nav></section></main></html>',{headers:{...headers,'Content-Type':'text/html; charset=utf-8'}});
 }catch{return new Response('Veriler şu anda alınamıyor.',{status:503,headers})}
 }
