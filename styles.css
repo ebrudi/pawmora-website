@@ -41,3 +41,22 @@ footer{background:#fffaf6}
 a:focus-visible,button:focus-visible{outline:3px solid #9b5077;outline-offset:4px}
 @media(max-width:760px){.hero-inner{gap:2rem}.hero h1{font-size:clamp(3rem,12vw,4.5rem)}.hero-art{border-width:5px}.section{padding-top:64px;padding-bottom:64px}}
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+
+.tiara{position:absolute;top:-22px;left:42%;font-size:40px;color:#c69b55;text-shadow:0 2px #fff4c5;z-index:5;transform:rotate(9deg)}
+.rabbit .arm{background:radial-gradient(circle at 35% 25%,#fff0f6,#e9a7c5 55%,#b66a95);border:2px solid #f9e2e9;border-radius:48%;box-shadow:inset 0 -5px 5px #a65a8022}
+.rabbit .dress{background:repeating-linear-gradient(105deg,#b86c99 0,#e4a9c8 13px,#f7d9e8 23px,#d18bb3 34px);border-bottom:8px solid #fff2e4;position:relative}
+.dress-bow{position:absolute;top:22%;left:50%;width:12px;height:12px;background:#a75883;border-radius:50%;transform:translateX(-50%);z-index:2}
+.dress-bow:before,.dress-bow:after{content:'';position:absolute;width:25px;height:17px;top:-3px;background:#b86d98;border:1px solid #f6d3e5;border-radius:50% 20% 20% 50%}
+.dress-bow:before{right:8px;transform:rotate(15deg)}.dress-bow:after{left:8px;transform:rotate(165deg)}
+.dress-lace{position:absolute;bottom:5px;left:5%;width:90%;height:12px;background:radial-gradient(circle at 6px 0,#fff8ed 6px,transparent 7px) repeat-x;background-size:12px 12px}
+.community{background:linear-gradient(135deg,#fff6ed,#f5e3ee);padding-inline:clamp(20px,8vw,120px)}
+.community-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:24px;max-width:1100px;margin:40px auto 0}
+.community-grid article{background:#fffaf7;border:1px solid #e6cbd9;border-radius:20px;padding:clamp(22px,4vw,44px);box-shadow:0 15px 35px #79536c12}
+.community-grid h3{font:500 2rem Georgia,serif;margin:14px 0 24px}
+.community-grid fieldset{border:0;padding:0;margin:0;display:grid;gap:12px;min-width:0}
+.community-grid label{display:block;font-size:.95rem;color:#584252}
+.community-grid input:not([type=radio]),.community-grid textarea{width:100%;border:1px solid #dec3d2;border-radius:8px;padding:12px;font:inherit;background:#fff;color:#493747}
+.community-grid input[type=radio]{accent-color:#a45579}
+.community-grid button:disabled{opacity:.65;cursor:not-allowed}
+.community-grid p{font-size:.85rem;color:#766374;margin-top:16px}
+@media(max-width:760px){.community-grid{grid-template-columns:1fr}}
