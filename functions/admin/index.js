@@ -1,0 +1,25 @@
+const headers={'Cache-Control':'no-store','X-Content-Type-Options':'nosniff','Content-Security-Policy':"default-src 'none'; style-src 'unsafe-inline'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'",'Referrer-Policy':'no-referrer','X-Frame-Options':'DENY'};
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const labels={lake:'Balıkçılık',fashion:'Kraliyet modası',home:'Büyük ev',festival:'Mevsim festivalleri'};
+async function equal(a,b){const e=new TextEncoder();const x=new Uint8Array(await crypto.subtle.digest('SHA-256',e.encode(a)));const y=new Uint8Array(await crypto.subtle.digest('SHA-256',e.encode(b)));let d=0;for(let i=0;i<x.length;i++)d|=x[i]^y[i];return d===0}
+export async function onRequest({request,env}){
+const u=new URL(request.url);
+if(u.hostname!=='pawmora-website.pages.dev')return new Response('Forbidden',{status:403,headers});
+if(!env.ADMIN_PASSWORD||env.ADMIN_PASSWORD.length<24||!env.DB)return new Response('Yönetim paneli henüz yapılandırılmadı.',{status:503,headers});
+if(request.method!=='GET')return new Response('Method not allowed',{status:405,headers});
+let auth='';try{const h=request.headers.get('Authorization')||'';if(h.startsWith('Basic ')&&h.length<4096)auth=atob(h.slice(6))}catch{}
+if(!await equal(auth,'admin:'+env.ADMIN_PASSWORD))return new Response('Giriş gerekli.',{status:401,headers:{...headers,'WWW-Authenticate':'Basic realm="Pawmora Admin", charset="UTF-8"'}});
+try{
+const votes=(await env.DB.prepare('SELECT choice,COUNT(*) AS n FROM votes GROUP BY choice').all()).results;
+const total=votes.reduce((a,b)=>a+Number(b.n),0);
+const page=Math.min(10000,Math.max(1,parseInt(u.searchParams.get('page'))||1));
+const ideas=(await env.DB.prepare('SELECT day,message FROM ideas ORDER BY day DESC,id LIMIT 50 OFFSET ?').bind((page-1)*50).all()).results;
+const count=(await env.DB.prepare('SELECT COUNT(*) AS n FROM ideas').first()).n;
+if(u.searchParams.get('format')==='csv'){
+const cell=v=>{let s=String(v);if(/^[\s]*[=+@-]|^[\t\r\n]/.test(s))s="'"+s;return '"'+s.replace(/"/g,'""')+'"'};
+return new Response('\uFEFFTarih,Öneri\r\n'+ideas.map(x=>[cell(x.day),cell(x.message)].join(',')).join('\r\n'),{headers:{...headers,'Content-Type':'text/csv; charset=utf-8','Content-Disposition':'attachment; filename="pawmora-ideas-page-'+page+'.csv"'}})}
+const bars=Object.entries(labels).map(([k,l])=>{const n=Number(votes.find(x=>x.choice===k)?.n||0);return '<p>'+l+' <strong>'+n+'</strong></p><progress max="'+Math.max(1,total)+'" value="'+n+'"></progress>'}).join('');
+const rows=ideas.map(x=>'<tr><td>'+esc(x.day)+'</td><td>'+esc(x.message)+'</td></tr>').join('');
+return new Response('<!doctype html><html lang="tr"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Pawmora Admin</title><style>body{font:16px system-ui;background:#fff4f5;color:#54354b;margin:0}main{max-width:960px;margin:auto;padding:28px}section{background:#fff;border:1px solid #e8c9da;border-radius:18px;padding:24px;margin:20px 0}h1{font-family:Georgia;font-size:36px}strong{float:right}progress{width:100%;accent-color:#b7799c}table{width:100%;border-collapse:collapse}td,th{text-align:left;padding:12px;border-bottom:1px solid #eadce4;overflow-wrap:anywhere}td:first-child{width:105px}a{color:#8a3967}nav{display:flex;gap:20px;flex-wrap:wrap}</style><main><h1>✿ Pawmora Admin</h1><p>Topluluk yönetimi · Özel panel</p><nav><a href="/">Siteye dön</a><a href="/admin/">Yenile</a></nav><section><h2>Toplam oy: '+total+'</h2>'+bars+'</section><section><h2>Gelen öneriler: '+Number(count)+'</h2><p><a href="?page='+page+'&amp;format=csv">Bu sayfayı CSV indir</a></p><table><thead><tr><th>Tarih</th><th>Öneri</th></tr></thead><tbody>'+rows+'</tbody></table><p>Sayfa '+page+'</p><nav>'+(page>1?'<a href="?page='+(page-1)+'">Önceki</a>':'')+(page*50<count?'<a href="?page='+(page+1)+'">Sonraki</a>':'')+'</nav></section></main></html>',{headers:{...headers,'Content-Type':'text/html; charset=utf-8'}});
+}catch{return new Response('Veriler şu anda alınamıyor.',{status:503,headers})}
+}
