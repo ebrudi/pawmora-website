@@ -1,4 +1,4 @@
-const headers={'Cache-Control':'no-store','X-Content-Type-Options':'nosniff','Content-Security-Policy':"default-src 'none'; style-src 'unsafe-inline'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'",'Referrer-Policy':'no-referrer','X-Frame-Options':'DENY'};
+const headers={'Cache-Control':'no-store','X-Content-Type-Options':'nosniff','Content-Security-Policy':"default-src 'none'; style-src 'unsafe-inline'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'",'Referrer-Policy':'same-origin','X-Frame-Options':'DENY'};
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const labels={lake:'Balıkçılık',fashion:'Kraliyet modası',home:'Büyük ev',festival:'Mevsim festivalleri'};
 async function equal(a,b){const e=new TextEncoder();const x=new Uint8Array(await crypto.subtle.digest('SHA-256',e.encode(a)));const y=new Uint8Array(await crypto.subtle.digest('SHA-256',e.encode(b)));let d=0;for(let i=0;i<x.length;i++)d|=x[i]^y[i];return d===0}
