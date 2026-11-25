@@ -1,0 +1,9 @@
+PAWMORA — BASIN BİLGİ DOSYASI
+Geliştirici: Ebru Dinç (bağımsız)
+Motor: Unity 6 URP
+Tür: Masalsı 3D evcil hayvan yaşam simülasyonu
+Durum: Geliştirme aşamasında; çıkış tarihi açıklanmadı.
+Platform: iOS hedefleniyor; Windows geliştirme önizlemesi mevcut.
+Vizyon: Karakter kişiselleştirme, moda, ev dekorasyonu, kasaba keşfi, balıkçılık ve mevsim etkinlikleri.
+Konsept görselleri gerçek oyun görüntüsü değildir. Planlanan özellikler değişebilir.
+Web: https://pawmora-website.pages.dev/
