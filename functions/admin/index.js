@@ -27,11 +27,11 @@ const ip=request.headers.get('CF-Connecting-IP');if(!ip)return login('Giriş yap
 const window=Math.floor(now/900),bucket=window+':'+await hash(ip+':'+env.ADMIN_PASSWORD);
 await db.prepare("DELETE FROM admin_login_limit WHERE CAST(substr(bucket,1,instr(bucket,':')-1) AS INTEGER)<?").bind(window-1).run();
 const attempt=await db.prepare('INSERT INTO admin_login_limit(bucket,n) VALUES (?,1) ON CONFLICT(bucket) DO UPDATE SET n=n+1 WHERE n<5 RETURNING n').bind(bucket).first();
-if(!attempt)return login('Çok fazla giriş denemesi. Daha sonra tekrar dene.',429);
+if(!attempt)return login('Çok fazla giriş denemesi. Yaklaşık '+Math.ceil(((window+1)*900-now)/60)+' dakika sonra tekrar dene.',429);
 const f=await request.formData(),pw=f.get('password');
 if(typeof pw!=='string'||!await equal(pw,env.ADMIN_PASSWORD))return login('Şifre hatalı.',401);
 const value=Array.from(crypto.getRandomValues(new Uint8Array(32)),x=>x.toString(16).padStart(2,'0')).join('');
-await db.batch([db.prepare('DELETE FROM admin_sessions WHERE expires<=? OR touched<=? OR id=?').bind(now,now-1800,sid),db.prepare('INSERT INTO admin_sessions VALUES (?,?,?)').bind(await hash(value+':'+env.ADMIN_PASSWORD),now+28800,now)]);
+await db.batch([db.prepare('DELETE FROM admin_sessions WHERE expires<=? OR touched<=? OR id=?').bind(now,now-1800,sid),db.prepare('INSERT INTO admin_sessions VALUES (?,?,?)').bind(await hash(value+':'+env.ADMIN_PASSWORD),now+28800,now),db.prepare('DELETE FROM admin_login_limit WHERE bucket=?').bind(bucket)]);
 return new Response(null,{status:303,headers:{...headers,'Set-Cookie':setCookie(value),Location:'/admin/'}});
 }
 if(!session)return request.method==='GET'?login():new Response('Oturum gerekli.',{status:401,headers});
