@@ -1,0 +1,9 @@
+PAWMORA — PRESS FACT SHEET
+Developer: Ebru Dinç (independent)
+Engine: Unity 6 URP
+Genre: Cozy 3D pet-life simulation
+Status: In development; release date unannounced.
+Platforms: iOS targeted; Windows development preview exists.
+Vision: Character customization, fashion, home decoration, village exploration, fishing and seasonal activities.
+Concept artwork is not gameplay. Planned features may change.
+Website: https://pawmora-website.pages.dev/
