@@ -12,15 +12,21 @@ if(request.method==='GET'){const r=await env.DB.prepare('SELECT choice, COUNT(*)
 if(request.method!=='POST')return reply({error:'method'},405);
 if(request.headers.get('Origin')!=='https://'+host||!request.headers.get('Content-Type')?.startsWith('application/json'))return reply({error:'origin'},403);
 const reader=request.body?.getReader();if(!reader)return reply({error:'body'},400);let size=0,parts=[];while(true){const {done,value}=await reader.read();if(done)break;size+=value.length;if(size>8192){await reader.cancel();return reply({error:'size'},413)}parts.push(value)}const bytes=new Uint8Array(size);let pos=0;for(const p of parts){bytes.set(p,pos);pos+=p.length}let d;try{d=JSON.parse(new TextDecoder().decode(bytes))}catch{return reply({error:'json'},400)}
-if(!d||typeof d.token!=='string'||d.token.length>2048||!d.token||!['vote','idea','join'].includes(d.type))return reply({error:'input'},400);
+if(!d||typeof d.token!=='string'||d.token.length>2048||!d.token||!['vote','idea','join','early'].includes(d.type))return reply({error:'input'},400);
 if(d.type==='vote'&&!votingOpen)return reply({error:'voting_closed'},409);
 if(d.type==='vote'&&!choices.includes(d.choice))return reply({error:'choice'},400);
 if(d.type==='idea'&&(typeof d.message!=='string'||!d.message.trim()||d.message.trim().length>500))return reply({error:'message'},400);
 if(d.type==='join'&&env.REWARDS_REGISTRATION_ENABLED!=='true')return reply({error:'disabled'},503);
 if(d.type==='join'&&d.consent!==true)return reply({error:'consent'},400);
+if(d.type==='early'&&(env.EARLY_ACCESS_ENABLED!=='true'||d.consent!==true||!['ios','android','windows'].includes(d.platform)))return reply({error:'unavailable'},400);
 const ip=request.headers.get('CF-Connecting-IP');if(!ip)return reply({error:'network'},403);
 const verification=await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify',{method:'POST',body:new URLSearchParams({secret:env.TURNSTILE_SECRET,response:d.token,remoteip:ip})});const v=await verification.json();if(!v.success||v.hostname!==host)return reply({error:'verification'},403);
 const day=new Date().toISOString().slice(0,10);const id=await key(env.TURNSTILE_SECRET,'network:'+ip);
+if(d.type==='early'){
+const member=await key(env.TURNSTILE_SECRET,'early-network:'+ip);
+await env.DB.prepare("INSERT INTO early_interest(member_id,platform) VALUES (?,?) ON CONFLICT(member_id) DO UPDATE SET platform=excluded.platform").bind(member,d.platform).run();
+return reply({ok:true});
+}
 if(d.type==='join'){
 const member=await key(env.TURNSTILE_SECRET,'founding-network:'+ip);
 await env.DB.batch([env.DB.prepare('INSERT OR IGNORE INTO reward_members(member_id) VALUES (?)').bind(member),env.DB.prepare("INSERT OR IGNORE INTO reward_milestones(member_id,milestone) VALUES (?,'founding')").bind(member)]);
