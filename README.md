@@ -1,19 +1,28 @@
-# Pawmora — Unity Fellowship landing page
+# Pawmora — Official website
 
-A lightweight English-language, responsive static website for Pawmora, built for GitHub Pages.
+Pawmora is an independently developed cozy pet-life simulation game in development.
 
-## Publish with GitHub Pages
-1. Create a **public** GitHub repository named `pawmora-website` (or another name).
-2. Upload `index.html`, `styles.css`, and `script.js` to the repository root (do not upload the ZIP itself).
-3. In **Settings → Pages**, under **Build and deployment**, select **Deploy from a branch**, choose `main` and `/(root)`, then **Save**.
-4. After GitHub finishes publishing, the expected URL is `https://ebrudi.github.io/pawmora-website/` if the repository is named `pawmora-website` under account `ebrudi`. Confirm the actual URL in the repository's Pages settings before sharing it.
+**Official website:** https://pawmora-website.pages.dev/
 
-## Before submitting the Fellowship application
-- Replace the CSS-only decorative artwork with **verified, real Pawmora screenshots** when suitable. The current artwork is original website decoration, not a screenshot or a representation of the shipped game.
-- Publish an actual, tested demo and gameplay video before adding their links.
-- No personal email address is published. Add a dedicated public contact address only if desired.
-- Verify descriptions of implemented features against the current Unity build.
-- Confirm rights for all game assets before publishing them.
+## Repository structure
+
+- `index.html`: main landing page
+- `press.html`: press information
+- `assets/`: website assets
+- `storybook.js`: storybook interface
+- `functions/`: Cloudflare Pages Functions (API and administration)
+- `database/`: database-related files
+- `_headers`, `_routes.json`: deployment configuration
+- `SECURITY.md`: vulnerability reporting policy
+
+## Deployment
+
+The current public site uses Cloudflare Pages. Connect the repository to a Pages project and use the repository root for the static output. Review existing project settings, function bindings and environment variables before deploying. Never commit credentials. Do not enable paid services without explicit approval.
 
 ## Local preview
-Open `index.html` in Chrome or Edge. The Google Fonts import requires internet; fallback fonts are provided.
+
+Open `index.html` for a static preview. Server-side functionality requires the corresponding Cloudflare development environment and bindings.
+
+## Project status
+
+The game is in development. Website artwork is promotional and should not be treated as verified gameplay footage. Demo and gameplay links should only be published after testing. Game source code is maintained separately in a private repository.
